@@ -9,6 +9,7 @@ git clone "https://$GH_TOKEN@github.com/aratare-jp/anmo-cli.git" gh-anmo-cli
 cp -R src/ gh-anmo-cli/
 ls -lhia
 cd gh-anmo-cli
+ls -lhia
 git add .
 git commit -m "Publish $DRONE_COMMIT_MESSAGE"
 #git branch -M main
