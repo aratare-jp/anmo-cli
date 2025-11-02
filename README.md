@@ -2,7 +2,7 @@
 
 ## Installation
 
-Download from https://github.com/anmo/anmo-bot
+Download from https://github.com/anmo/anmo-cli
 
 ## Usage
 
