@@ -1,0 +1,50 @@
+kind: pipeline
+type: docker
+name: test
+
+trigger:
+  ref:
+    - refs/heads/main
+    - refs/heads/master
+    - refs/pull/**
+
+steps:
+  - name: test + build
+    image: clojure:temurin-24-tools-deps-alpine
+    volumes:
+      - name: cache
+        path: ./target
+    environment:
+      GH_TOKEN:
+        from_secret: gh_token
+    commands:
+      - java -version
+      - clojure -version
+      - apk --no-cache add curl jq
+      - clojure -T:build ci :version ":$DRONE_TAG"
+
+---
+kind: pipeline
+type: docker
+name: release
+
+trigger:
+  ref:
+    - refs/tags/v*
+
+steps:
+  - name: test, build and publish
+    image: clojure:temurin-24-tools-deps-alpine
+    volumes:
+      - name: cache
+        path: ./target
+    environment: 
+      GH_TOKEN:
+        from_secret: gh_token
+    commands:
+      - java -version
+      - clojure -version
+      - apk --no-cache add curl jq
+      - clojure -T:build ci :version ":$DRONE_TAG"
+      - bin/drone_publish.sh
+ 
