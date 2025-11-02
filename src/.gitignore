@@ -1,8 +1,0 @@
-/build
-*.iml
-/.idea
-/.cpcache
-/target
-logs
-/.clj-kondo
-.nrepl-port

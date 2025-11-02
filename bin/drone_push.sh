@@ -6,6 +6,7 @@ echo $(pwd)
 rm -rf .git .drone.yml
 cd ..
 git clone "https://$GH_TOKEN@github.com/aratare-jp/anmo-cli.git" gh-anmo-cli 
+rm -rf gh-anmo-cli/*
 cp -R src/. gh-anmo-cli/
 cd gh-anmo-cli
 ls -lhia

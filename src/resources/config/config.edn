@@ -1,4 +1,0 @@
-{:server                {:port 3000}
-
- :twitch-auth-url       "https://id.twitch.tv/oauth2/authorize"
- :twitch-auth-token-url "https://id.twitch.tv/oauth2/token"}

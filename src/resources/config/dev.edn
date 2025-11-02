@@ -1,2 +1,0 @@
-{:server     {:port 9897}
- :downloader {:save-dir "/mnt/shared/mangas"}}
