@@ -1,6 +1,4 @@
-# anmo/anmo-bot
-
-FIXME: my new application.
+# anmo/anmo-cli
 
 ## Installation
 
