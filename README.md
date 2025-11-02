@@ -4,7 +4,7 @@
 
 Download from https://github.com/anmo/anmo-cli
 
-## Usagee
+## Usage
 
 FIXME: explanation
 
