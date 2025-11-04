@@ -4,8 +4,9 @@
             [clojure.java.io :as io]
             [clojure.pprint :as pprint]
             [clojure.string :as string])
-  (:import (java.nio.charset MalformedInputException StandardCharsets)
-           (java.nio.file Files)
+  (:import (java.io File)
+           (java.nio.charset StandardCharsets)
+           (java.nio.file FileVisitResult Files SimpleFileVisitor)
            (java.nio.file.attribute FileAttribute)
            (java.util.concurrent ExecutorCompletionService Executors)
            (java.util.zip ZipInputStream)
@@ -147,8 +148,7 @@
              "")))
        (catch Exception e
          (.printStackTrace e)
-         (throw (ex-info "Exception encountered when downloading mods" e)))
-       )
+         (throw (ex-info "Exception encountered when downloading mods" e))))
 
      ;; Move extracted mods from the tmp dir to the new dir
      (doseq [tmp-mod-dir (recursive-mod-lookup tmp-dest-dir)]
@@ -163,32 +163,88 @@
          (when is-disabled?
            (.renameTo original-dest-dir dest-dir)))))))
 
+(defn find-imya-files
+  "Recursively walk root dir to find all IMYA files, i.e. files that have imyatweak in their names."
+  [root-dir]
+  (let [results (atom [])
+        visitor (proxy
+                  [SimpleFileVisitor]
+                  []
+                  (visitFile [file attrs]
+                    (when (string/includes? (.getFileName file) "imyatweak")
+                      (swap! results conj (.toString file)))
+                    FileVisitResult/CONTINUE))]
+    (Files/walkFileTree (.toPath root-dir) visitor)
+    @results))
+
+(defn find-mod-sub-path
+  [mods-dir mod-path]
+  (let [start-index (string/index-of mod-path mods-dir)]
+    (.substring mod-path (+ start-index (count mods-dir) 1))))
+
+(defn update-mods
+  "Update the target mods while preserving IMYA files."
+  [{:keys [mods-dir] :as mods-conf} target-mods]
+  ;; Remove the current local mods
+  (let [root-temp-dir (.toFile (Files/createTempDirectory "anmo-cli" (into-array FileAttribute [])))
+        imya-files (atom [])]
+    (doseq [[mod-id {:keys [mod-path] :as local-mod}] target-mods]
+      (when mod-path
+        (let [mod-file (io/file mod-path)]
+          (when (.exists mod-file)
+            ;; Save the IMYA files into some tmp place
+            (doseq [imya-file (find-imya-files mod-file)]
+              (let [src-file (io/file imya-file)
+                    subpath (find-mod-sub-path (:mods-dir mods-conf) imya-file)
+                    dest-file (io/file root-temp-dir subpath)]
+                (FileUtils/copyFile src-file dest-file)
+                (swap! imya-files conj dest-file)))
+            (FileUtils/deleteDirectory mod-file)))))
+
+    ;; Extract the new mods into the mods dir
+    (extract-mods mods-conf target-mods)
+
+    ;; Move back the IMYA files
+    (doseq [src-file @imya-files]
+      (let [subpath (find-mod-sub-path (.getAbsolutePath root-temp-dir) (.getAbsolutePath src-file))
+            dest-file (io/file mods-dir subpath)]
+        (FileUtils/copyFile ^File src-file dest-file)))))
+
+(defn find-new-mods
+  "Filter out all new mods that are not already in local."
+  [mods-conf mods-list]
+  (let [mods-info (aif/fetch-mod-infos mods-conf mods-list)
+        local-mods (aif/fetch-local-mod-infos mods-conf)]
+    (reduce
+      (fn [acc [mod-id mod-data]]
+        (if (not= (get-in local-mods [mod-id :mod-version]) (:mod-version mod-data))
+          (assoc acc mod-id (merge (get local-mods mod-id) mod-data))
+          acc))
+      {}
+      mods-info)))
+
 (defn handle
   [{:keys [mods-dir] :as mods-conf} mods-list]
   (let [mods-dir (io/file mods-dir)]
     (when-not (.exists mods-dir)
       (.mkdirs mods-dir))
-    (let [mods-info (aif/fetch-mod-infos mods-conf mods-list)
-          local-mods (aif/fetch-local-mod-infos mods-conf)
-          ;; Filter out all new mods that are not already in local.
-          target-mods (reduce
-                        (fn [acc [mod-id mod-data]]
-                          (if (not= (get-in local-mods [mod-id :mod-version]) (:mod-version mod-data))
-                            (assoc acc mod-id (merge (get local-mods mod-id) mod-data))
-                            acc))
-                        {}
-                        mods-info)]
+    (let [target-mods (find-new-mods mods-conf mods-list)]
       (if (empty? target-mods)
         (println "No new mods detected.")
-        (do
-          (doseq [[mod-id {:keys [mod-path] :as local-mod}] target-mods]
-            (when mod-path
-              (let [mod-file (io/file mod-path)]
-                (when (.exists mod-file)
-                  (FileUtils/deleteDirectory mod-file)))))
-          (extract-mods mods-conf target-mods))))))
+        (update-mods mods-conf target-mods)))))
 
 (comment
+  (doseq [path (find-imya-files (io/file "D:\\SteamLibrary\\steamapps\\common\\Anno 1800\\mods\\[Cheat] Combined Influence Mod for Residences (Taludas)"))]
+    (println (-> path io/file .exists)))
+  (find-mod-sub-path (anmo.config/mods-conf) "D:\\SteamLibrary\\steamapps\\common\\Anno 1800\\mods\\[Cheat] Combined Influence Mod for Residences (Taludas)")
+  (update-mods
+    {:mods-dir     "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods-extracted"
+     :download-dir "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods"}
+    {:3227838 {:mod-path      "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods-extracted\\[Cheat] Combined Influence Mod for Residences (Taludas)"
+               :mod-id        3227838
+               :mod-name      "[Cheat] Combined Influence Mod for Residences (Taludas)"
+               :mod-version   "v1.0.1"
+               :mod-file-size 1000}})
   (clojure.pprint/pprint {:a 1 :b 2})
   (is-mod-dir? "/home/suppaionigiri/Downloads/anno-1800-mods/3210489/1.0.1/[Adjustments] Harbor Blocking")
   (require '[anmo.config])
