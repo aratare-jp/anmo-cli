@@ -213,8 +213,8 @@
 (defn find-new-mods
   "Filter out all new mods that are not already in local."
   [mods-conf mods-list]
-  (let [mods-info (aif/fetch-mod-infos mods-conf mods-list)
-        local-mods (aif/fetch-local-mod-infos mods-conf)]
+  (let [mods-info (aif/fetch-mods-info mods-conf mods-list)
+        local-mods (aif/fetch-local-mods-info mods-conf)]
     (reduce
       (fn [acc [mod-id mod-data]]
         (if (not= (get-in local-mods [mod-id :mod-version]) (:mod-version mod-data))

@@ -1,14 +1,18 @@
 (ns anmo.downloader
   (:require [aleph.http :as http]
             [anmo.info-fetcher :as aif]
+            [anmo.schemas :as as]
+            [anmo.utils :as au]
             [clj-commons.byte-streams :as bs]
             [clojure.java.io :as io]
+            [malli.core :as m]
             [manifold.deferred :as d])
   (:import (java.io File InputStream OutputStream)
            (java.util.concurrent ExecutorCompletionService Executors)
-           (me.tongfei.progressbar ProgressBar)
            (org.apache.commons.io FileUtils)))
 
+(m/=> download-file
+  [:=> [:cat :string as/ModsInfo] [:map [:status :keyword]]])
 (defn download-file
   [download-dir {:keys [mod-id mod-name mod-file-name mod-file-size mod-version mod-download-url] :as mod-info}]
   (try
@@ -21,11 +25,9 @@
         (do
           (when (not (.exists mod-dir))
             (.mkdirs mod-dir))
-          (with-open [progress-bar (new ProgressBar mod-name mod-file-size)
+          (with-open [progress-bar (au/create-progress-bar mod-name mod-file-size)
                       ^InputStream in @(d/chain
-                                         (http/get mod-download-url {:retry-handler (fn [ex try-count http-context]
-                                                                                      (println "Got:" ex)
-                                                                                      (< try-count 3))})
+                                         (http/get mod-download-url)
                                          :body
                                          bs/to-input-stream)
                       ^OutputStream out (io/output-stream mod-file)]
@@ -40,15 +42,16 @@
       (FileUtils/deleteDirectory (io/file download-dir (str mod-id)))
       {:status :error :cause e})))
 
+(m/=> download-mods
+  [:function
+   [:=> [:cat as/ModsConf as/ModsInfo] :nil]
+   [:=> [:cat as/ModsConf as/ModsInfo as/-ExecutorCompletionService] :nil]])
 (defn download-mods
   ([mods-conf mods-info]
-   (let [chunk-size 5
-         inner-thread-pool (Executors/newCachedThreadPool)
+   (let [inner-thread-pool (Executors/newVirtualThreadPerTaskExecutor)
          thread-pool (new ExecutorCompletionService inner-thread-pool)]
      (try
-       (doseq [[idx chunk] (map-indexed vector (partition chunk-size chunk-size [] mods-info))]
-         (println "==========" "Downloading batch" (inc idx) "==========")
-         (download-mods mods-conf (into {} chunk) thread-pool))
+       (download-mods mods-conf mods-info thread-pool)
        (finally
          (.shutdownNow inner-thread-pool)))))
   ([{:keys [download-dir] :as mods-conf} mods-info thread-pool]
@@ -71,15 +74,16 @@
              "")))
        (catch Exception e
          (.printStackTrace e)
-         (throw (ex-info "Exception encountered when downloading mods" e)))
-       ))))
+         (throw (ex-info "Exception encountered when downloading mods" e)))))))
 
+(m/=> handle
+  [:=> [:cat as/ModsConf as/ModsList] :any])
 (defn handle
   [{:keys [download-dir] :as mods-conf} mods-list]
   (let [download-dir-file (io/file download-dir)]
     (when (not (.exists download-dir-file))
       (.mkdir download-dir-file)))
-  (let [mods-info (aif/fetch-mod-infos mods-conf mods-list)
+  (let [mods-info (aif/fetch-mods-info mods-conf mods-list)
         local-download-mods (aif/fetch-local-download-mod-infos mods-conf)
         ;; Filter out all new mods that are not already in local. 
         target-mods (reduce
@@ -94,24 +98,28 @@
       (download-mods mods-conf target-mods))))
 
 (comment
-  (anmo.config/mods-conf)
-  (anmo.config/mods-list)
-  (partition 3 3 [] (range 10))
-  (for [chunk (partition 2 2 [] {:a 1 :b 2 :c 3 :d 4 :e 5})]
-    (into {} chunk))
-  (into {} (take 1 {:a 1 :b 2}))
-  (count (range 0 10000 4096))
-  (/ 10000 4096)
-  (quot 10000 4096)
-  (mod 10000 4096)
-  (handle
-    (anmo.config/mods-conf)
-    (anmo.config/mods-list))
-
+  (malli.dev/start!)
+  (user/stop)
+  (user/start)
+  (malli.instrument/instrument!)
   (require '[anmo.config])
-
+  (anmo.config/mods-conf)
+  (malli.core/function-schemas)
   (handle
-    (anmo.config/mods-conf)
+    (-> (anmo.config/mods-conf)
+        (assoc :download-dir "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods-2")
+        (assoc :mods-dir "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods-extracted-2")
+        )
+    (into [] (take 2 (anmo.config/mods-list))))
+  (aif/fetch-mods-info
+    (-> (anmo.config/mods-conf)
+        (assoc :download-dir "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods-2")
+        (assoc :mods-dir "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods-extracted-2")
+        )
     (anmo.config/mods-list))
-  (mod 2277376 4096)
+  (aif/fetch-local-download-mod-infos
+    (-> (anmo.config/mods-conf)
+        (assoc :download-dir "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods-2")
+        (assoc :mods-dir "C:\\Users\\suppaionigiri\\Downloads\\anno-1800-mods-extracted-2")))
+
   )

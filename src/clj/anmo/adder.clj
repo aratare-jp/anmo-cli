@@ -29,7 +29,7 @@
 
 (defn remove-mods
   [to-be-removed-mod-ids]
-  (let [local-mods (aif/fetch-local-mod-infos (ac/mods-conf))
+  (let [local-mods (aif/fetch-local-mods-info (ac/mods-conf))
         mods-list (mapv name (ac/mods-list))
         to-be-removed-mod-ids-set (into #{} to-be-removed-mod-ids)
         mods-list-set (into #{} mods-list)
@@ -59,10 +59,10 @@
   (require '[clojure.set])
   (clojure.set/difference #{1 2} #{1 2 3})
   (clojure.set/difference #{1 2 3} #{1 2 4 5})
-  (count (keys (aif/fetch-local-mod-infos (ac/mods-conf))))
-  (count (aif/fetch-local-mod-infos (ac/mods-conf)))
+  (count (keys (aif/fetch-local-mods-info (ac/mods-conf))))
+  (count (aif/fetch-local-mods-info (ac/mods-conf)))
   (count (ac/mods-list))
-  (count (clojure.set/intersection (into #{} (keys (aif/fetch-local-mod-infos (ac/mods-conf)))) (into #{} (ac/mods-list))))
+  (count (clojure.set/intersection (into #{} (keys (aif/fetch-local-mods-info (ac/mods-conf)))) (into #{} (ac/mods-list))))
   (add-mods ["4999992" "3277161" "4767273" "5200281"])
   (remove-mods ["12345"])
   (remove #{1 2 3} [1 2 3 4 5])
