@@ -4,6 +4,7 @@
     [anmo.config :as ac]
     [anmo.downloader :as ad]
     [anmo.extractor :as ax]
+    [anmo.scanner :as as]
     [clojure.edn]
     [clojure.string :as string]
     [clojure.tools.cli :as cli])
@@ -15,9 +16,9 @@
    ["-h" "--help"]])
 
 (defn usage [options-summary]
-  (->> ["This is my program. There are many like it, but this one is mine."
+  (->> ["CLI tool to manage Anno mods"
         ""
-        "Usage: program-name [options] action"
+        "Usage: java -jar anmo-cli.jar [options] action"
         ""
         "Options:"
         options-summary
@@ -27,7 +28,8 @@
         "  remove MOD_ID1 MOD_ID2..."
         "  download"
         "  extract"
-        "  sync"]
+        "  sync"
+        "  scan"]
        (string/join \newline)))
 
 (defn error-msg [errors]
@@ -49,7 +51,7 @@
       {:exit-message (error-msg errors)}
       ;; custom validation on arguments
       (and (= 1 (count arguments))
-           (#{"sync" "download" "extract"} (first arguments)))
+           (#{"scan" "sync" "download" "extract"} (first arguments)))
       {:action (first arguments) :options options}
       (and (< 1 (count arguments))
            (#{"add" "remove"} (first arguments)))
@@ -74,7 +76,7 @@
                   (ax/handle mods-conf mods-list))
           :download (ad/handle mods-conf mods-list)
           :extract (ax/handle mods-conf mods-list)
-          :scan (println "Scan")
+          :scan (as/scan-mods mods-conf mods-list)
           :add (aa/add-mods arguments)
           :remove (aa/remove-mods arguments)
           (throw (new RuntimeException "Unknown mode")))))))
@@ -90,7 +92,9 @@
   (System/getProperty "os.name")
   (clojure.repl/doc case)
   (-main)
+  (user/start)
   (-main "sync")
   (-main "add" "4999992" "3277161" "4767273" "5200281")
   (-main "remove" "4767273")
+  (-main "scan")
   )
