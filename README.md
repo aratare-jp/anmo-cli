@@ -1,5 +1,24 @@
 # anmo/anmo-cli
 
+A command line tool to help managing your Anno mods so you don't have to manually update your hundreds of mods anymore.
+
+## Features:
+
+- Add/remove mod IDs
+- Download new mods or old mods with newer versions from `mod.io`
+- Extract downloaded mods to designated location while preserving IMYA files and enabled/disabled states
+
+## Notes
+
+As part of the extraction process, the tool will create a metadata file called `anmo.edn` in each mod folder.
+
+This file stores mod ID and version which is used by the tool during each run to check if the mod needs to be updated
+or not.
+
+As such, if you copy and paste the mods manually, the tool will not be able to handle these mods.
+
+It is thus highly recommended to migrate from the ingame mod manager, then run `sync` to let the tool handle the mods.
+
 ## Prerequisites
 
 - Comfortable with command line
@@ -116,7 +135,7 @@ $ java -jar .\anmo-v0.0.1.jar scan
 
 This will scan the `:scan-dir` location and retrieve all the mod IDs and put them into `mods-list.txt`
 
-## Add/remove mods
+## Add mods
 
 To add a mod or multiple mods, do:
 
@@ -125,6 +144,17 @@ $ java -jar .\anmo-v0.0.1.jar add 123456 346778 923456
 ```
 
 Note that this command simply adds those mods to `mods-list.txt`. To download and extract them, use the `sync` command.
+
+## Remove mods
+
+To remove a mod or multiple mods, do:
+
+```shell
+$ java -jar .\anmo-v0.0.1.jar remove 123456 346778 923456
+```
+
+Note that this command will _both_ remove the mod IDs from `mods-list.txt` _and_ remove the actual mod folders (but not
+the downloaded mod zip files).
 
 ## Download mods
 
@@ -166,20 +196,9 @@ $ java -jar .\anmo-v0.0.1.jar sync
 ```
 
 This will download and then extract the files, i.e. it just executes `download` and then `extract` for convenience.
- 
-# Notes
-As part of the extraction process, the tool will create a metadata file called `anmo.edn` in each mod folder. 
-
-This file stores mod ID and version which is used by the tool during each run to check if the mod needs to be updated
-or not. 
-
-As such, if you copy and paste the mods manually, the tool will not be able to handle these mods.
-
-It is thus highly recommended to migrate, then run `sync` instead.
-
 
 # Development
- 
+
 Run the project directly, via `:exec-fn`:
 
     $ clojure -X:run-x
@@ -219,7 +238,7 @@ from `build.clj`.
 Run that uberjar:
 
     $ java -jar target/net.clojars.anmo/anmo-bot-0.1.0-SNAPSHOT.jar
- 
+
 ## License
 
 Copyright © 2024 Suppaionigiri
