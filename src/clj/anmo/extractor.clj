@@ -48,7 +48,6 @@
        (extract-helper latest-zip-file dest-dir mod-name mod-file-size StandardCharsets/UTF_8 progress-bar)
        (catch Exception e
          (.reset progress-bar)
-         ()
          (extract-helper latest-zip-file dest-dir mod-name mod-file-size StandardCharsets/ISO_8859_1 progress-bar)))))
   ([latest-zip-file dest-dir mod-name mod-file-size charset progress-bar]
    (with-open [src-is (new ZipInputStream (io/input-stream latest-zip-file) charset)]
@@ -157,8 +156,7 @@
              is-disabled? (get-in mods-info [mod-id :is-disabled?])
              mod-name (.getName tmp-mod-dir)
              original-dest-dir (io/file mods-dir mod-name)
-             dest-dir (io/file mods-dir (str (if is-disabled? "-" "") mod-name))
-             ]
+             dest-dir (io/file mods-dir (str (if is-disabled? "-" "") mod-name))]
          (FileUtils/moveDirectoryToDirectory tmp-mod-dir mods-dir true)
          (when is-disabled?
            (.renameTo original-dest-dir dest-dir)))))))
@@ -254,10 +252,10 @@
     )
   (recursive-mod-lookup (io/file "/tmp/cool"))
   (extract-file
-    (io/file "C:/Users/suppaionigiri/Downloads/anno-1800-mods/3229533/v1.6.8")
-    (io/file "C:/Users/suppaionigiri/Downloads/anno-1800-mods/3229533/v1.6.8")
-    :3229533
-    {:mod-id :3229533 :mod-file-size 10000 :mod-version "v1.6.8"})
+    (io/file "C:/Users/suppaionigiri/Downloads/anno-1800-mods/3664611/1.0.0")
+    (io/file "C:/Users/suppaionigiri/Downloads/anno-1800-mods/3664611/1.0.0")
+    :3664611
+    {:mod-id :3664611 :mod-file-size 10000 :mod-version "1.0.0"})
   (extract-file
     (io/file "C:/Users/suppaionigiri/Downloads/anno-1800-mods/4908997/1.0.20")
     (io/file "C:/Users/suppaionigiri/Downloads/anno-1800-mods/4908997/1.0.20")
